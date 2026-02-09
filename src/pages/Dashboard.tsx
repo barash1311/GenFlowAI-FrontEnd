@@ -12,16 +12,20 @@ function StatCard({
   value,
   to,
   loading,
+  error,
 }: {
   title: string;
   value: number;
   to?: string;
   loading?: boolean;
+  error?: boolean;
 }) {
   const content = (
     <>
       <p className="text-sm font-medium text-slate-500">{title}</p>
-      <p className="mt-1 text-2xl font-semibold text-slate-800">{loading ? '—' : value}</p>
+      <p className="mt-1 text-2xl font-semibold text-slate-800">
+        {loading ? '—' : error ? '!' : value}
+      </p>
     </>
   );
   if (to) {
@@ -35,13 +39,18 @@ function StatCard({
 }
 
 export default function Dashboard() {
-  const { data: datasets = [], isLoading: datasetsLoading } = useDatasets();
-  const { data: prompts = [], isLoading: promptsLoading } = usePrompts();
-  const { data: predictions = [], isLoading: predictionsLoading } = usePredictions();
+  const { data: datasets, isLoading: datasetsLoading, isError: datasetsError } = useDatasets();
+  const { data: prompts, isLoading: promptsLoading, isError: promptsError } = usePrompts();
+  const { data: predictions, isLoading: predictionsLoading, isError: predictionsError } = usePredictions();
 
-  const running = predictions.filter((p) => p.status === 'RUNNING').length;
-  const failed = predictions.filter((p) => p.status === 'FAILED').length;
-  const completed = predictions.filter((p) => p.status === 'COMPLETED').length;
+  // Safe array access - ensure data is actually an array before filtering
+  const safeDatasets = Array.isArray(datasets) ? datasets : [];
+  const safePrompts = Array.isArray(prompts) ? prompts : [];
+  const safePredictions = Array.isArray(predictions) ? predictions : [];
+
+  const running = safePredictions.filter((p) => p.status === 'RUNNING').length;
+  const failed = safePredictions.filter((p) => p.status === 'FAILED').length;
+  const completed = safePredictions.filter((p) => p.status === 'COMPLETED').length;
 
   return (
     <div className="space-y-8">
@@ -51,9 +60,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard title="Datasets" value={datasets.length} to="/datasets" loading={datasetsLoading} />
-        <StatCard title="Prompts" value={prompts.length} to="/prompts" loading={promptsLoading} />
-        <StatCard title="Predictions" value={predictions.length} to="/predictions" loading={predictionsLoading} />
+        <StatCard title="Datasets" value={safeDatasets.length} to="/datasets" loading={datasetsLoading} error={datasetsError} />
+        <StatCard title="Prompts" value={safePrompts.length} to="/prompts" loading={promptsLoading} error={promptsError} />
+        <StatCard title="Predictions" value={safePredictions.length} to="/predictions" loading={predictionsLoading} error={predictionsError} />
         <StatCard title="Running jobs" value={running} />
         <StatCard title="Failed jobs" value={failed} />
       </div>

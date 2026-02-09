@@ -35,9 +35,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isInitialized: false,
   });
   const clearingRef = useRef(false);
+  // Prevent session clearing while login/register is in progress
+  const authInProgressRef = useRef(false);
 
   const clearSessionOnly = useCallback(() => {
-    if (clearingRef.current) return;
+    // Don't clear session while auth operation is in progress
+    if (clearingRef.current || authInProgressRef.current) return;
     clearingRef.current = true;
     localStorage.removeItem(TOKEN_KEY);
     setState((s) => ({ ...s, user: null, token: null }));
@@ -82,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
+    authInProgressRef.current = true;
     setState((s) => ({ ...s, isLoading: true }));
     try {
       const res = await authApi.login({ email, password });
@@ -99,10 +103,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       setState((s) => ({ ...s, isLoading: false }));
       throw e;
+    } finally {
+      authInProgressRef.current = false;
     }
   }, []);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
+    authInProgressRef.current = true;
     setState((s) => ({ ...s, isLoading: true }));
     try {
       const res = await authApi.register({ email, password, name });
@@ -120,6 +127,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       setState((s) => ({ ...s, isLoading: false }));
       throw e;
+    } finally {
+      authInProgressRef.current = false;
     }
   }, []);
 

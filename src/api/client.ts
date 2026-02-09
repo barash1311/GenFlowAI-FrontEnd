@@ -9,8 +9,8 @@ const baseURL =
   import.meta.env.DEV
     ? '/api/v1'
     : (typeof raw === 'string' && raw.trim()
-        ? raw.trim().replace(/\/$/, '')
-        : 'http://localhost:8080/api/v1');
+      ? raw.trim().replace(/\/$/, '')
+      : 'http://localhost:8080/api/v1');
 
 export const apiClient = axios.create({
   baseURL,
@@ -39,9 +39,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     const status = error.response?.status;
-    const isLogout = error.config?.url?.includes('/auth/logout');
-    // Clear session on 401/403, except for logout (else logout 401 would loop).
-    if ((status === 401 || status === 403) && !isLogout) {
+    const url = error.config?.url ?? '';
+    // Exclude all auth endpoints from triggering session clear
+    // (login can fail legitimately, me can fail during refresh, logout should not loop)
+    const isAuthEndpoint = url.includes('/auth/');
+    // Clear session on 401/403, except for auth endpoints to prevent logout loops
+    if ((status === 401 || status === 403) && !isAuthEndpoint) {
       onUnauthorized?.();
     }
     return Promise.reject(error);
